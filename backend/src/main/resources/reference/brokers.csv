@@ -1,0 +1,7 @@
+# Sample NEPSE broker seed. Replace with the authoritative broker registry.
+# Format: broker_id,name,status   (status optional, defaults ACTIVE)
+broker_id,name,status
+28,Broker 28,ACTIVE
+41,Broker 41,ACTIVE
+58,Broker 58,ACTIVE
+63,Broker 63,ACTIVE

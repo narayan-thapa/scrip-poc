@@ -1,0 +1,39 @@
+<header class="app-bar">
+  <span class="brand">NEPSE <strong>Signals</strong></span>
+  <nav>
+    <a routerLink="/signals" routerLinkActive="active">Signals</a>
+    <a routerLink="/charts" routerLinkActive="active">Charts</a>
+    <a routerLink="/backtests" routerLinkActive="active">Backtests</a>
+    @if (auth.isAuthenticated()) {
+      <a routerLink="/watchlists" routerLinkActive="active">Watchlists</a>
+      <a routerLink="/notifications" routerLinkActive="active">
+        Notifications
+        @if (realtime.unread() > 0) {
+          <span class="badge-count">{{ realtime.unread() }}</span>
+        }
+      </a>
+    }
+  </nav>
+  <span class="spacer"></span>
+  @if (auth.isAuthenticated()) {
+    <span class="muted">{{ auth.user()?.email }}</span>
+    <button class="ghost" (click)="logout()">Sign out</button>
+  } @else {
+    <a routerLink="/login" class="link">Sign in</a>
+  }
+</header>
+
+<main class="app-main">
+  <router-outlet />
+</main>
+
+@if (realtime.toasts().length) {
+  <div class="toast-stack">
+    @for (t of realtime.toasts(); track t.id) {
+      <div class="toast" (click)="realtime.dismiss(t.id)">
+        <strong>{{ t.title }}</strong>
+        <div class="muted">{{ t.body }}</div>
+      </div>
+    }
+  </div>
+}

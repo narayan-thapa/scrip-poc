@@ -1,0 +1,99 @@
+.app-bar {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0 1.5rem;
+  height: 56px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand {
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+  color: var(--text-1);
+}
+
+.app-bar nav {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.app-bar nav a {
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  color: var(--text-2);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.92rem;
+}
+
+.app-bar nav a:hover {
+  background: var(--surface-2);
+  color: var(--text-1);
+}
+
+.app-bar nav a.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.app-bar .spacer {
+  flex: 1;
+}
+
+.app-bar > .muted {
+  color: var(--text-2);
+  font-size: 0.88rem;
+}
+
+.app-bar > button.ghost {
+  padding: 0.35rem 0.75rem;
+}
+
+.app-bar > a.link {
+  text-decoration: none;
+}
+
+.badge-count {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 5px;
+  margin-left: 4px;
+  border-radius: 999px;
+  background: var(--sell);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.app-main {
+  padding: 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.toast-stack {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  z-index: 50;
+  max-width: 320px;
+}
+
+.toast {
+  background: var(--surface-1);
+  border: 1px solid var(--accent);
+  border-left-width: 4px;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}

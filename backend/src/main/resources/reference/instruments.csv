@@ -1,0 +1,6 @@
+# Sample instrument seed. The real list is admin-maintained; unknown symbols seen
+# in the floorsheet are auto-registered as PROVISIONAL during ingestion.
+# Format: symbol,name,sector,status   (name/sector/status optional)
+symbol,name,sector,status
+BHCL,BHCL,Hydro Power,ACTIVE
+GRDBL,GRDBL,Development Bank,ACTIVE

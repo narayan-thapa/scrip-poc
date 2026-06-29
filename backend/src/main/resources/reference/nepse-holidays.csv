@@ -1,0 +1,7 @@
+# NEPSE public/market holidays (admin-maintained). Friday & Saturday are already
+# treated as the weekend by the seeder, so list only weekday closures here.
+# Format: YYYY-MM-DD,note   (note optional)
+#
+# Example (uncomment / replace with the authoritative SEBON/NEPSE calendar):
+# 2026-04-14,Nepali New Year
+# 2026-10-20,Dashain
