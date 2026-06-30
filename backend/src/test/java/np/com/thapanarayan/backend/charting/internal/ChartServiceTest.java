@@ -24,6 +24,8 @@ import np.com.thapanarayan.backend.marketdata.api.VolumeProfileView;
 import np.com.thapanarayan.backend.signal.api.SignalAction;
 import np.com.thapanarayan.backend.signal.api.SignalQuery;
 import np.com.thapanarayan.backend.signal.api.SignalView;
+import np.com.thapanarayan.backend.smc.api.SmcAnalysisQuery;
+import np.com.thapanarayan.backend.smc.api.SmcView;
 
 /** Composition + ETag behaviour of the charting service, over fake upstream ports. */
 class ChartServiceTest {
@@ -39,7 +41,8 @@ class ChartServiceTest {
     private final MarketDataQuery marketData = new FakeMarketData();
     private final IndicatorSeriesQuery indicators = new FakeIndicators();
     private final SignalQuery signals = new FakeSignals();
-    private final ChartService service = new ChartService(marketData, indicators, signals);
+    private final SmcAnalysisQuery smcAnalysis = new FakeSmc();
+    private final ChartService service = new ChartService(marketData, indicators, signals, smcAnalysis);
 
     @Test
     void composesCandlesOverlaysVolumeProfileAndSignalMarkers() {
@@ -62,6 +65,15 @@ class ChartServiceTest {
 
         assertThat(view.volumeProfile()).isNull();
         assertThat(view.indicators()).isEmpty();
+    }
+
+    @Test
+    void attachesSmcOnlyWhenRequested() {
+        assertThat(service.compose("ABC", FROM, TO, List.of(), List.of()).smc()).isNull();
+
+        ChartView withSmc = service.compose("ABC", FROM, TO, List.of(), List.of("smc"));
+        assertThat(withSmc.smc()).isNotNull();
+        assertThat(withSmc.smc().symbol()).isEqualTo("ABC");
     }
 
     @Test
@@ -119,6 +131,13 @@ class ChartServiceTest {
                 LocalDate from, LocalDate to) {
             return new IndicatorSeriesView(symbol, indicator, List.of(9),
                     Map.of(indicator, List.of(new IndicatorPoint(to, BigDecimal.valueOf(101)))));
+        }
+    }
+
+    private static final class FakeSmc implements SmcAnalysisQuery {
+        @Override
+        public SmcView analyze(String symbol, LocalDate from, LocalDate to) {
+            return new SmcView(symbol.trim().toUpperCase(), 2, List.of(), List.of());
         }
     }
 

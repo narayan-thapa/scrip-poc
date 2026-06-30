@@ -23,7 +23,7 @@ class ModuleBoundaryTest {
 
     private static final List<String> MODULES = List.of(
             "reference", "ingestion", "marketdata", "indicator", "signal",
-            "backtest", "charting", "watchlist", "notification", "iam", "platform");
+            "backtest", "charting", "watchlist", "notification", "iam", "platform", "smc");
 
     @Test
     void noModuleAccessesAnotherModulesInternalPackage() {

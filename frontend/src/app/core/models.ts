@@ -72,6 +72,17 @@ export interface IndicatorSeriesView {
   lines: Record<string, IndicatorPoint[]>;
 }
 
+export type IndicatorCategory = 'TREND' | 'MOMENTUM' | 'VOLATILITY' | 'VOLUME';
+
+/** One entry of the indicator catalog (`GET /api/v1/indicators/catalog`). */
+export interface IndicatorCatalogEntry {
+  key: string;
+  name: string;
+  category: IndicatorCategory;
+  defaultParams: number[];
+  lines: string[];
+}
+
 export interface VolumeProfileView {
   symbol: string;
   tradeDate: string;
@@ -90,6 +101,36 @@ export interface SignalMarkerView {
   narrative: string;
 }
 
+// --- Smart Money Concepts (SMC) ---
+
+export type SmcZoneType = 'BULLISH_OB' | 'BEARISH_OB' | 'BULLISH_FVG' | 'BEARISH_FVG';
+export type SmcEventType = 'BOS_BULLISH' | 'BOS_BEARISH' | 'CHOCH_BULLISH' | 'CHOCH_BEARISH';
+
+/** A price/time rectangle: an order block or fair-value gap. */
+export interface SmcZone {
+  type: SmcZoneType;
+  fromDate: string;
+  toDate: string;
+  top: number;
+  bottom: number;
+  mitigated: boolean;
+}
+
+/** A structural break (BOS/CHoCH) plotted as a labelled marker. */
+export interface SmcEvent {
+  type: SmcEventType;
+  date: string;
+  price: number;
+  label: string;
+}
+
+export interface SmcView {
+  symbol: string;
+  swingLookback: number;
+  zones: SmcZone[];
+  events: SmcEvent[];
+}
+
 export interface ChartView {
   symbol: string;
   from: string;
@@ -98,6 +139,7 @@ export interface ChartView {
   indicators: IndicatorSeriesView[];
   volumeProfile: VolumeProfileView | null;
   signals: SignalMarkerView[];
+  smc: SmcView | null;
 }
 
 export type BacktestStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
