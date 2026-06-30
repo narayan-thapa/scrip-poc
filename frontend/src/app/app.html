@@ -12,6 +12,9 @@
           <span class="badge-count">{{ realtime.unread() }}</span>
         }
       </a>
+      @if (auth.isAdmin()) {
+        <a routerLink="/ingestion" routerLinkActive="active">Batch upload</a>
+      }
     }
   </nav>
   <span class="spacer"></span>

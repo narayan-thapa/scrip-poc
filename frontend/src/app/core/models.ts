@@ -206,3 +206,53 @@ export interface NotificationView {
   read: boolean;
   createdAt: string;
 }
+
+// --- Ingestion (admin batch upload) ---
+
+export type IngestionStatus =
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'PARTIAL'
+  | 'FAILED'
+  | 'SKIPPED';
+
+export interface IngestionBatchView {
+  id: number;
+  fileCount: number;
+  dateFrom: string;
+  dateTo: string;
+  status: IngestionStatus;
+  submittedBy: string;
+  submittedAt: string;
+  finishedAt: string | null;
+}
+
+export interface IngestionJobView {
+  id: number;
+  batchId: number | null;
+  tradeDate: string;
+  sourceFilename: string;
+  fileHash: string;
+  rowsRead: number;
+  rowsAccepted: number;
+  rowsRejected: number;
+  rowsDuplicate: number;
+  status: IngestionStatus;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+/** Per-file outcome at batch intake (before async ingestion runs). */
+export interface FileIntake {
+  filename: string;
+  tradeDate: string | null;
+  accepted: boolean;
+  message: string;
+}
+
+/** Synchronous response to a batch upload (HTTP 202). */
+export interface BatchSubmissionResult {
+  batchId: number;
+  files: FileIntake[];
+}

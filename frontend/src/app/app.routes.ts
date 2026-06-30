@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { authGuard } from './core/auth-guard';
+import { adminGuard, authGuard } from './core/auth-guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'signals' },
@@ -30,6 +30,11 @@ export const routes: Routes = [
     path: 'notifications',
     canActivate: [authGuard],
     loadComponent: () => import('./notifications/notifications').then((m) => m.Notifications),
+  },
+  {
+    path: 'ingestion',
+    canActivate: [adminGuard],
+    loadComponent: () => import('./ingestion/batch-upload').then((m) => m.BatchUpload),
   },
   { path: '**', redirectTo: 'signals' },
 ];

@@ -9,3 +9,16 @@ export const authGuard: CanActivateFn = () => {
   const router = inject(Router);
   return auth.isAuthenticated() ? true : router.createUrlTree(['/login']);
 };
+
+/**
+ * Restricts a route to ADMIN users: anonymous visitors go to login, authenticated
+ * non-admins are bounced to the default view (the backend also enforces this).
+ */
+export const adminGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  if (!auth.isAuthenticated()) {
+    return router.createUrlTree(['/login']);
+  }
+  return auth.isAdmin() ? true : router.createUrlTree(['/signals']);
+};

@@ -18,14 +18,14 @@ import np.com.thapanarayan.backend.signal.api.SignalsGeneratedEvent;
  * lists, to avoid redundant cost during bulk reprocessing.</p>
  */
 @Component
-class SignalsGeneratedListener {
+class BackTestSignalsGeneratedListener {
 
-    private static final Logger log = LoggerFactory.getLogger(SignalsGeneratedListener.class);
+    private static final Logger log = LoggerFactory.getLogger(BackTestSignalsGeneratedListener.class);
 
     private final BacktestService service;
     private final BacktestProperties properties;
 
-    SignalsGeneratedListener(BacktestService service, BacktestProperties properties) {
+    BackTestSignalsGeneratedListener(BacktestService service, BacktestProperties properties) {
         this.service = service;
         this.properties = properties;
     }
