@@ -13,6 +13,8 @@ import np.com.thapanarayan.backend.platform.api.error.ErrorCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Intake for single and multi-file uploads (Decision D, option 1). Enforces guardrails, validates
@@ -68,8 +70,23 @@ public class BatchUploadService {
             return new FileIntake(d.file().filename(), d.date(), d.file().content().length);
         }).toList();
 
-        pipeline.runBatchAsync(batch.getId());
-        return new IntakeResult(batch.getId(), intake);
+        // Dispatch async processing only AFTER this transaction commits. The @Async worker runs on a
+        // separate thread with its own connection; if we called it here (still mid-transaction) it would
+        // race the commit and its batches.findById(...).orElseThrow() (IngestionPipeline#runBatch) would
+        // throw NoSuchElementException because the batch row isn't visible yet under READ_COMMITTED.
+        UUID batchId = batch.getId();
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    pipeline.runBatchAsync(batchId);
+                }
+            });
+        } else {
+            // No active transaction (e.g. unit test) — nothing to wait for.
+            pipeline.runBatchAsync(batchId);
+        }
+        return new IntakeResult(batchId, intake);
     }
 
     private void validateCaps(List<UploadedFile> files) {

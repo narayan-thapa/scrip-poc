@@ -16,6 +16,8 @@ import java.util.List;
 import np.com.thapanarayan.backend.ingestion.internal.BatchUploadService.UploadedFile;
 import np.com.thapanarayan.backend.ingestion.internal.repo.IngestionBatchRepository;
 import np.com.thapanarayan.backend.platform.api.error.ApiException;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -87,5 +89,32 @@ class BatchUploadServiceTest {
         verify(ingestionService, times(2)).createJob(any(), any(), any(), any());
         verify(ingestionService).createJob(any(), eq(LocalDate.of(2026, 6, 3)), eq("2026-06-03.csv"), any());
         verify(pipeline).runBatchAsync(any());
+    }
+
+    /**
+     * Regression for the async-before-commit race: when a transaction is active, the async dispatch
+     * must be deferred until afterCommit — otherwise the @Async worker races the commit and
+     * IngestionPipeline#runBatch's findById(...).orElseThrow() throws NoSuchElementException.
+     */
+    @Test
+    void defersAsyncDispatchUntilAfterCommit() {
+        when(batches.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        TransactionSynchronizationManager.initSynchronization(); // simulate an active @Transactional
+        try {
+            service.submit(List.of(csv("2026-06-03.csv")), "admin");
+
+            // Still "inside" the transaction: the async worker must NOT have been kicked off yet.
+            verify(pipeline, never()).runBatchAsync(any());
+
+            // Commit: fire the registered afterCommit callbacks, as the tx manager would.
+            var syncs = TransactionSynchronizationManager.getSynchronizations();
+            assertThat(syncs).hasSize(1);
+            syncs.forEach(TransactionSynchronization::afterCommit);
+
+            // Now — and only now — the batch is committed and safe to process asynchronously.
+            verify(pipeline, times(1)).runBatchAsync(any());
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 }
