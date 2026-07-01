@@ -1,0 +1,57 @@
+<header class="page-head"><h1>Data ingestion</h1></header>
+
+<section class="card upload">
+  <h2>Upload floorsheet CSV(s)</h2>
+  <p class="hint">
+    Filenames must match <code>YYYY-MM-DD.csv</code>. Multiple files upload as an ordered backfill
+    (oldest first). The date is taken from the filename and cross-checked against each row.
+  </p>
+
+  <input type="file" multiple accept=".csv" (change)="onSelect($event)" />
+
+  @if (candidates().length > 0) {
+    <ul class="candidates">
+      @for (c of candidates(); track c.file.name) {
+        <li [class.invalid]="!c.valid">
+          {{ c.file.name }}
+          @if (!c.valid) { <span class="tag">bad name</span> }
+        </li>
+      }
+    </ul>
+    @if (!allValid()) {
+      <p class="form-error">Some filenames don't match YYYY-MM-DD.csv — fix or remove them.</p>
+    }
+  }
+
+  <button type="button" [disabled]="!allValid() || submitting()" (click)="submit()">
+    {{ submitting() ? 'Uploading…' : 'Upload & ingest' }}
+  </button>
+</section>
+
+<section class="batches">
+  <h2>Recent batches</h2>
+  @if (batches.isLoading()) {
+    <app-spinner label="Loading batches" />
+  } @else if (batches.error()) {
+    <app-error-state title="Couldn't load batches" (retry)="batches.reload()" />
+  } @else if (rows().length === 0) {
+    <app-empty-state title="No ingestion runs yet" hint="Upload a file to get started." />
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr><th>Submitted</th><th>Dates</th><th>Files</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        @for (b of rows(); track b.id) {
+          <tr>
+            <td class="numeric">{{ b.submittedAt }}</td>
+            <td>{{ b.dateFrom }} → {{ b.dateTo }}</td>
+            <td class="numeric">{{ b.fileCount }}</td>
+            <td><span class="status" [attr.data-status]="b.status">{{ b.status }}</span></td>
+            <td><a [routerLink]="['/admin/ingestion/batches', b.id]">Details</a></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

@@ -1,0 +1,154 @@
+spring:
+  application:
+    name: backend
+  profiles:
+    active: local
+  # Java 25 virtual threads: blocking I/O (ingestion, per-symbol indicator compute) scales
+  # without a reactive rewrite.
+  threads:
+    virtual:
+      enabled: true
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none          # Flyway owns the schema; Hibernate never mutates it
+    properties:
+      hibernate.jdbc.time_zone: Asia/Kathmandu
+  flyway:
+    enabled: true
+    # Single migration set; per-module organization is by file-name convention
+    # (V<seq>__<module>_<description>.sql).
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  data:
+    web:
+      pageable:
+        default-page-size: 50
+        max-page-size: 200
+  batch:
+    jdbc:
+      # Create Spring Batch metadata tables if absent (harmless until the Batch pipeline is wired
+      # in the scheduling phase). No job runs at startup unless spring.batch.job.name is set.
+      initialize-schema: always
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 1GB
+
+# Ingestion guardrails (Decision D) and Amount cross-check tolerance.
+ingestion:
+  amount-tolerance: 0.5
+  max-files-per-batch: 400
+  max-file-bytes: 104857600      # 100 MB
+  max-batch-bytes: 1073741824    # 1 GB
+  webhook-secret: ${INGESTION_WEBHOOK_SECRET:}
+  scheduler:
+    enabled: true                # 15:01 NPT daily pipeline run
+
+# Security: JWT secret comes from the environment in non-dev (SECURITY_JWT_SECRET); blank in dev
+# triggers an ephemeral key. CORS is locked to the Angular origin(s).
+security:
+  jwt-secret: ${SECURITY_JWT_SECRET:}
+  access-ttl: 15m
+  refresh-ttl: 7d
+  issuer: nepse-platform
+  cookie-secure: true
+  cookie-same-site: Strict
+  cors-origins:
+    - http://localhost:4200
+
+# Object store (S3/MinIO) archives raw scraped CSVs. Disabled by default so the app boots locally
+# without one; credentials come from env/secret manager, never committed.
+platform:
+  object-store:
+    enabled: false
+    endpoint: ${OBJECT_STORE_ENDPOINT:}
+    access-key: ${OBJECT_STORE_ACCESS_KEY:}
+    secret-key: ${OBJECT_STORE_SECRET_KEY:}
+    bucket: ${OBJECT_STORE_BUCKET:nepse-raw}
+  rate-limit:
+    enabled: true
+    auth-capacity: 20
+    auth-refill-per-second: 0.33   # ~20/min sustained per IP on auth endpoints
+
+# Correlation id (traceId) in every log line.
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:backend},%X{traceId:-}]"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+---
+# ---------- local: developer machine ----------
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:postgresql://localhost:5432/nepse
+    username: ${DB_USERNAME:nepse}
+    password: ${DB_PASSWORD:nepse}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+management:
+  health:
+    # Allow booting without Redis running on a dev box.
+    redis:
+      enabled: false
+# Dev runs over http://localhost, so the refresh cookie can't be Secure-only.
+security:
+  cookie-secure: false
+  cookie-same-site: Lax
+
+---
+# ---------- dev: shared environment ----------
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+
+---
+# ---------- prod ----------
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    properties:
+      hibernate.hbm2ddl.auto: none
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+platform:
+  object-store:
+    enabled: true

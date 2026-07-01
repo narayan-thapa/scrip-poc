@@ -1,0 +1,63 @@
+<header class="app-header">
+  <a class="brand" routerLink="/">
+    <span class="brand-mark">◈</span>
+    <span class="brand-name">NEPSE Signal Platform</span>
+  </a>
+
+  @if (auth.isAuthenticated()) {
+    <nav class="app-nav">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Home</a>
+      <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
+      <a routerLink="/market" routerLinkActive="active">Market</a>
+      <a routerLink="/screener/price-drop" routerLinkActive="active">Price drops</a>
+      <a routerLink="/signals" routerLinkActive="active">Signals</a>
+      <a routerLink="/backtests" routerLinkActive="active">Backtests</a>
+      <a routerLink="/watchlists" routerLinkActive="active">Watchlists</a>
+      <a routerLink="/instruments" routerLinkActive="active">Instruments</a>
+      <a routerLink="/strategies" routerLinkActive="active">Strategies</a>
+      <a routerLink="/alerts" routerLinkActive="active">Alerts</a>
+      @if (auth.user()?.role === 'ADMIN') {
+        <a routerLink="/pipeline" routerLinkActive="active">Pipeline</a>
+      }
+      <a routerLink="/brokers" routerLinkActive="active">Brokers</a>
+      <a routerLink="/calendar" routerLinkActive="active">Calendar</a>
+      @if (auth.user()?.role === 'ADMIN') {
+        <a routerLink="/admin/ingestion" routerLinkActive="active">Ingestion</a>
+      }
+    </nav>
+  } @else {
+    <span class="app-nav"></span>
+  }
+
+  <span class="conn-badge" [class.up]="connected()" [class.down]="failed()">
+    @if (system.ping.isLoading()) {
+      connecting…
+    } @else if (failed()) {
+      backend offline
+    } @else {
+      backend {{ system.ping.value()?.status }}
+    }
+  </span>
+
+  @if (auth.isAuthenticated()) {
+    <div class="user-menu">
+      <a class="bell" routerLink="/notifications" aria-label="Notifications">
+        🔔
+        @if (notifications.unread() > 0) {
+          <span class="badge">{{ notifications.unread() }}</span>
+        }
+      </a>
+      <span class="user-email">{{ auth.user()?.email }}</span>
+      <span class="role-chip">{{ auth.user()?.role }}</span>
+      <button type="button" (click)="logout()">Logout</button>
+    </div>
+  } @else {
+    <a class="login-link" routerLink="/login">Sign in</a>
+  }
+</header>
+
+<main class="app-content">
+  <router-outlet />
+</main>
+
+<app-toast-host />

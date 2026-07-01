@@ -1,0 +1,4 @@
+/* Page-specific tweaks; shared table/filter/pager styles live in global styles.css. */
+:host {
+  display: block;
+}

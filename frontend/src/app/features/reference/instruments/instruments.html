@@ -1,0 +1,56 @@
+<header class="page-head">
+  <h1>Instruments</h1>
+  <div class="filters">
+    <input
+      type="search"
+      placeholder="Search symbol or name…"
+      [value]="q()"
+      (change)="applyQuery($any($event.target).value)"
+    />
+    <select [value]="status()" (change)="applyStatus($any($event.target).value)">
+      <option value="">All statuses</option>
+      <option value="ACTIVE">Active</option>
+      <option value="SUSPENDED">Suspended</option>
+      <option value="DELISTED">Delisted</option>
+    </select>
+  </div>
+</header>
+
+@if (instruments.isLoading()) {
+  <app-spinner label="Loading instruments" />
+} @else if (instruments.error()) {
+  <app-error-state title="Couldn't load instruments" (retry)="instruments.reload()" />
+} @else if (rows().length === 0) {
+  <app-empty-state title="No instruments match" hint="Try clearing the filters." />
+} @else {
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Symbol</th>
+        <th>Name</th>
+        <th>Sector</th>
+        <th>Type</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (i of rows(); track i.symbol) {
+        <tr>
+          <td><a [routerLink]="['/instruments', i.symbol]">{{ i.symbol }}</a>
+            @if (i.provisional) { <span class="tag">provisional</span> }
+          </td>
+          <td>{{ i.name }}</td>
+          <td>{{ i.sector ?? '—' }}</td>
+          <td>{{ i.type }}</td>
+          <td>{{ i.status }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <nav class="pager">
+    <button type="button" [disabled]="!hasPrev()" (click)="prev()">← Prev</button>
+    <span>Page {{ (instruments.value()?.page ?? 0) + 1 }} of {{ instruments.value()?.totalPages ?? 1 }}</span>
+    <button type="button" [disabled]="!hasNext()" (click)="next()">Next →</button>
+  </nav>
+}

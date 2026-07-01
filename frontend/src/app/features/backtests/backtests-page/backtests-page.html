@@ -1,0 +1,65 @@
+<header class="page-head"><h1>Backtests</h1></header>
+
+<section class="card">
+  <h2>Run a backtest</h2>
+  <form [formGroup]="form" (ngSubmit)="run()">
+    <label>Symbol <input formControlName="symbol" placeholder="NABIL" /></label>
+    <label>From <input type="date" formControlName="from" /></label>
+    <label>To <input type="date" formControlName="to" /></label>
+    <label>Capital <input type="number" formControlName="startingCapital" /></label>
+    <label>Buy ≥ <input type="number" formControlName="buyThreshold" /></label>
+    <label>Sell ≤ − <input type="number" formControlName="sellThreshold" /></label>
+    <button type="submit" [disabled]="form.invalid || running()">
+      {{ running() ? 'Running…' : 'Run backtest' }}
+    </button>
+  </form>
+  <p class="muted">Confluence strategy, signal-at-close / fill-next-open, NEPSE costs applied.</p>
+</section>
+
+@if (comparison(); as rows) {
+  <section class="card">
+    <h2>Comparison</h2>
+    <table class="data-table">
+      <thead><tr><th>Symbol</th><th>Return %</th><th>CAGR %</th><th>Max DD %</th><th>Win %</th><th>Sortino</th></tr></thead>
+      <tbody>
+        @for (r of rows; track r.run.id) {
+          <tr>
+            <td>{{ r.run.symbol }}</td>
+            <td class="numeric">{{ r.metrics['totalReturnPct'] }}</td>
+            <td class="numeric">{{ r.metrics['cagrPct'] }}</td>
+            <td class="numeric">{{ r.metrics['maxDrawdownPct'] }}</td>
+            <td class="numeric">{{ r.metrics['winRatePct'] }}</td>
+            <td class="numeric">{{ r.metrics['sortino'] }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+}
+
+<section>
+  <div class="runs-head">
+    <h2>Recent runs</h2>
+    <button type="button" [disabled]="selected().size < 2" (click)="compare()">Compare selected</button>
+  </div>
+  @if (runs.isLoading()) {
+    <app-spinner label="Loading runs" />
+  } @else if ((runs.value() ?? []).length === 0) {
+    <app-empty-state title="No backtests yet" hint="Run one above." />
+  } @else {
+    <table class="data-table">
+      <thead><tr><th></th><th>Symbol</th><th>Range</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        @for (r of runs.value() ?? []; track r.id) {
+          <tr>
+            <td><input type="checkbox" (change)="toggle(r.id)" /></td>
+            <td>{{ r.symbol }}</td>
+            <td>{{ r.from }} → {{ r.to }}</td>
+            <td>{{ r.status }}</td>
+            <td><a [routerLink]="['/backtests', r.id]">Open →</a></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>
