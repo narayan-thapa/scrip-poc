@@ -77,4 +77,9 @@ public class SignalDao {
         return jdbc.query("SELECT * FROM signal WHERE symbol = ? ORDER BY trade_date DESC LIMIT ?",
                 rowMapper, symbol, limit);
     }
+
+    public List<SignalRecord> bySymbolInRange(String symbol, LocalDate from, LocalDate to) {
+        return jdbc.query("SELECT * FROM signal WHERE symbol = ? AND trade_date BETWEEN ? AND ? ORDER BY trade_date",
+                rowMapper, symbol, from, to);
+    }
 }

@@ -24,8 +24,19 @@ class MarketAnalyticsImpl implements MarketAnalytics {
 
     @Override
     public Optional<VolumeProfileView> volumeProfile(String symbol, LocalDate date) {
-        return profiles.find(symbol, date, date)
-                .map(p -> new VolumeProfileView(p.symbol(), p.poc(), p.vah(), p.val()));
+        return profiles.find(symbol, date, date).map(MarketAnalyticsImpl::toView);
+    }
+
+    @Override
+    public Optional<VolumeProfileView> volumeProfile(String symbol, LocalDate from, LocalDate to) {
+        return profiles.find(symbol, from, to)
+                .or(() -> profiles.find(symbol, to, to))
+                .map(MarketAnalyticsImpl::toView);
+    }
+
+    private static VolumeProfileView toView(np.com.thapanarayan.backend.marketdata.internal.domain.VolumeProfile p) {
+        return new VolumeProfileView(p.symbol(), p.poc(), p.vah(), p.val(),
+                p.bins().stream().map(b -> new VolumeProfileView.PriceBin(b.price(), b.volume())).toList());
     }
 
     @Override

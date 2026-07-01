@@ -422,3 +422,36 @@ export interface StageStatus {
   lastDate: string | null;
   updatedAt: string | null;
 }
+
+// ---- Composite chart payload (F7) ----
+
+export interface ChartCandle {
+  time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
+export interface ChartVolumePoint {
+  time: string;
+  value: number;
+  color: string;
+}
+
+export interface ChartVolumeProfile {
+  poc: number;
+  vah: number;
+  val: number;
+  bins: { price: number; volume: number }[];
+}
+
+export interface ChartPayload {
+  symbol: string;
+  from: string;
+  to: string;
+  candles: ChartCandle[];
+  volume: ChartVolumePoint[];
+  volumeProfile: ChartVolumeProfile | null;
+  markers: { id: string; time: string; action: string; score: number }[];
+}

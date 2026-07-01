@@ -10,7 +10,6 @@ import {
   output,
   viewChild,
 } from '@angular/core';
-import { SignalSummary } from '../../../core/api/models';
 import { forkJoin, map } from 'rxjs';
 import {
   CandlestickSeries,
@@ -26,13 +25,20 @@ import { ComputeResponse } from '../../../core/api/models';
 import { NotificationService } from '../../../core/notification/notification.service';
 import { IndicatorApi } from '../../indicators/indicator.service';
 import { ActiveStudy } from '../../indicators/add-indicator/add-indicator';
-import { MarketApi } from '../market.service';
+import { ChartApi } from '../chart.service';
+
+/**
+ * Oscillators that render in their own sub-pane below price (v5 multi-pane) rather than overlaid on
+ * the price axis — their scale (0–100, ±) is incompatible with price. Everything else (moving
+ * averages, Bollinger, Supertrend/UT Bot, SMC) overlays the price pane.
+ */
+const SEPARATE_PANE_STUDIES = new Set(['rsi', 'macd', 'adx', 'mfi', 'atr', 'cci', 'stoch']);
 
 /**
  * TradingView Lightweight Charts™ v5 price chart: candlesticks + a volume overlay, the volume
  * profile's POC/VAH/VAL as price lines, and any active studies rendered by output kind —
- * LINE/BAND as line series, SIGNAL as a line + buy/sell markers, MARKER as pattern markers, ZONE as
- * structure rays + labels (boxes are approximated by rays in this phase). EOD → business-day axis.
+ * LINE/BAND as line series (price overlay, or an own sub-pane for oscillators), SIGNAL as a line +
+ * buy/sell markers, MARKER as pattern markers, ZONE as structure rays + labels. EOD → business-day axis.
  */
 @Component({
   selector: 'app-price-chart',
@@ -45,11 +51,10 @@ export class PriceChart {
   readonly from = input<string>('2024-01-01');
   readonly to = input<string>(new Date().toISOString().slice(0, 10));
   readonly studies = input<ActiveStudy[]>([]);
-  readonly signalMarkers = input<SignalSummary[]>([]);
-  /** Emits the business-day string when the user clicks the chart (to open that day's signal). */
-  readonly dateClicked = output<string>();
+  /** Emits the signal id when the user clicks a bar carrying a signal marker (to open its reasons). */
+  readonly signalSelected = output<string>();
 
-  private readonly api = inject(MarketApi);
+  private readonly api = inject(ChartApi);
   private readonly indicators = inject(IndicatorApi);
   private readonly notify = inject(NotificationService);
   private readonly container = viewChild.required<ElementRef<HTMLDivElement>>('container');
@@ -63,6 +68,7 @@ export class PriceChart {
   // Loosely typed: the markers plugin's generic (Time) fights structural typing on our plain objects.
   private markersHandle?: { setMarkers: (markers: unknown[]) => void };
   private studyMarkers: { time: string; position: string; color: string; shape: string; text: string }[] = [];
+  private signalMarkersData: { time: string; id: string; action: string }[] = [];
 
   constructor() {
     afterNextRender(() => this.init());
@@ -79,12 +85,6 @@ export class PriceChart {
       this.studies();
       if (this.chart) {
         this.renderStudies();
-      }
-    });
-    effect(() => {
-      this.signalMarkers();
-      if (this.chart) {
-        this.applyMarkers();
       }
     });
   }
@@ -108,7 +108,10 @@ export class PriceChart {
     this.volumeSeries.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
     this.chart.subscribeClick((param) => {
       if (param.time) {
-        this.dateClicked.emit(String(param.time));
+        const marker = this.signalMarkersData.find((m) => m.time === String(param.time));
+        if (marker) {
+          this.signalSelected.emit(marker.id);
+        }
       }
     });
     this.load();
@@ -116,22 +119,20 @@ export class PriceChart {
 
   private load(): void {
     const symbol = this.symbol();
-    forkJoin({
-      candles: this.api.candles(symbol, this.from(), this.to()),
-      profile: this.api.volumeProfile(symbol, this.from(), this.to()),
-    }).subscribe({
-      next: ({ candles, profile }) => {
+    // One composite call (F7): candles + volume + volume profile + signal markers (with ids, so a
+    // click opens the reasons panel — no separate signals request needed).
+    this.api.chart(symbol, this.from(), this.to()).subscribe({
+      next: (payload) => {
         this.candleSeries?.setData(
-          candles.map((c) => ({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close })),
+          payload.candles.map((c) => ({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close })),
         );
         this.volumeSeries?.setData(
-          candles.map((c) => ({
-            time: c.time,
-            value: c.volume,
-            color: (c.changePct ?? 0) >= 0 ? 'rgba(22,163,74,0.4)' : 'rgba(220,38,38,0.4)',
-          })),
+          payload.volume.map((v) => ({ time: v.time, value: v.value, color: v.color })),
         );
-        this.drawProfileLines(profile.poc, profile.vah, profile.val);
+        if (payload.volumeProfile) {
+          this.drawProfileLines(payload.volumeProfile.poc, payload.volumeProfile.vah, payload.volumeProfile.val);
+        }
+        this.signalMarkersData = payload.markers.map((m) => ({ time: m.time, id: m.id, action: m.action }));
         this.chart?.timeScale().fitContent();
         this.renderStudies();
       },
@@ -158,6 +159,19 @@ export class PriceChart {
     this.overlayPriceLines.forEach((pl) => this.candleSeries?.removePriceLine(pl as never));
     this.overlayPriceLines = [];
     this.markersHandle?.setMarkers([]);
+    // Drop any oscillator sub-panes (keep pane 0 = price + volume).
+    if (this.chart) {
+      for (let i = this.chart.panes().length - 1; i >= 1; i--) {
+        this.chart.removePane(i);
+      }
+    }
+  }
+
+  /** Ensure a pane at {@code index} exists (0 = price). */
+  private ensurePane(index: number): void {
+    while (this.chart && this.chart.panes().length <= index) {
+      this.chart.addPane();
+    }
   }
 
   private renderStudies(): void {
@@ -172,14 +186,23 @@ export class PriceChart {
       return;
     }
     const symbol = this.symbol();
+    // Assign each oscillator its own sub-pane (1, 2, …); price overlays stay on pane 0.
+    let nextPane = 1;
+    const planned = studies.map((st) => ({ st, pane: SEPARATE_PANE_STUDIES.has(st.id) ? nextPane++ : 0 }));
+
     forkJoin(
-      studies.map((st) =>
-        this.indicators.compute(symbol, st.id, this.from(), this.to(), st.params).pipe(map((r) => ({ st, r }))),
+      planned.map(({ st, pane }) =>
+        this.indicators.compute(symbol, st.id, this.from(), this.to(), st.params).pipe(map((r) => ({ st, r, pane }))),
       ),
     ).subscribe((results) => {
       const markers: { time: string; position: string; color: string; shape: string; text: string }[] = [];
-      for (const { st, r } of results) {
-        this.renderOne(st, r, markers);
+      for (const { st, r, pane } of results) {
+        this.renderOne(st, r, markers, pane);
+      }
+      // Keep the price pane dominant over any oscillator sub-panes.
+      const panes = this.chart?.panes() ?? [];
+      if (panes.length > 1) {
+        panes[0].setStretchFactor(3);
       }
       this.studyMarkers = markers;
       this.applyMarkers();
@@ -191,8 +214,8 @@ export class PriceChart {
     if (!this.candleSeries) {
       return;
     }
-    const signalMarkers = this.signalMarkers().map((s) => ({
-      time: s.tradeDate,
+    const signalMarkers = this.signalMarkersData.map((s) => ({
+      time: s.time,
       position: s.action === 'BUY' ? 'belowBar' : s.action === 'SELL' ? 'aboveBar' : 'inBar',
       color: s.action === 'BUY' ? '#16a34a' : s.action === 'SELL' ? '#dc2626' : '#9aa4b2',
       shape: s.action === 'BUY' ? 'arrowUp' : s.action === 'SELL' ? 'arrowDown' : 'circle',
@@ -204,12 +227,15 @@ export class PriceChart {
     };
   }
 
-  private renderOne(study: ActiveStudy, r: ComputeResponse, markers: { time: string; position: string; color: string; shape: string; text: string }[]): void {
+  private renderOne(study: ActiveStudy, r: ComputeResponse,
+                    markers: { time: string; position: string; color: string; shape: string; text: string }[],
+                    pane: number): void {
     switch (r.outputKind) {
       case 'LINE':
       case 'BAND': {
+        this.ensurePane(pane);
         Object.values(r.lines ?? {}).forEach((points) => {
-          const line = this.chart!.addSeries(LineSeries, { color: study.color, lineWidth: 2 });
+          const line = this.chart!.addSeries(LineSeries, { color: study.color, lineWidth: 2 }, pane);
           line.setData(points.map((p) => ({ time: p.time, value: p.value })));
           this.overlaySeries.push(line);
         });

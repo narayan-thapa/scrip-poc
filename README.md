@@ -22,6 +22,15 @@ Ties Phases 2–8 together with the daily trigger, status, and the secure-by-def
 
 ---
 
+## Charting API (F7) ✅
+
+The dedicated `charting` module — read-only composition over marketdata + indicator + signal.
+- **`GET /charts/{symbol}`** returns **one payload** whose arrays map 1:1 to Lightweight Charts series: candlesticks, a volume histogram, requested `indicators=` overlays (tagged by output kind), the `overlays=volprofile` bins + POC/VAH/VAL, and signal markers — **ETag-validated** (unchanged chart → 304). **`GET /charts/{symbol}/markers`** returns markers only.
+- New published read-ports enable it without touching internals: `indicator.api.IndicatorEngine`, `marketdata` volume-profile bins + range lookup, `signal.api.SignalReader.markersFor`. ArchUnit-clean.
+- Frontend `price-chart` loads **everything** — candles, volume, volume profile, and **signal markers (with ids)** — from the single composite call; clicking a marker emits its id straight to the reasons panel (the separate `/signals/symbol` fetch is gone). Interactive study overlays use `/indicators/compute` and render by output kind, with **oscillators (RSI/MACD/ADX/MFI/ATR) in their own sub-panes** below price (v5 multi-pane); moving averages / Bollinger / Supertrend / SMC overlay the price pane. *(UDF datafeed endpoints for TradingView Advanced Charts remain optional/deferred — Lightweight Charts needs no datafeed.)*
+
+---
+
 ## Status: Phase 8 — Notifications, Realtime & Watchlists ✅
 
 Push the day's relevant signals to users, in-app and in real time.

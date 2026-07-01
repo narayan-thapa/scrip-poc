@@ -2,7 +2,9 @@ package np.com.thapanarayan.backend.signal.internal;
 
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import np.com.thapanarayan.backend.signal.api.SignalMarker;
 import np.com.thapanarayan.backend.signal.api.SignalReader;
 import np.com.thapanarayan.backend.signal.api.SignalView;
 import org.springframework.stereotype.Service;
@@ -23,5 +25,12 @@ class SignalReaderImpl implements SignalReader {
             map.put(s.symbol(), new SignalView(s.id().toString(), s.symbol(), s.action(), s.score()));
         }
         return map;
+    }
+
+    @Override
+    public List<SignalMarker> markersFor(String symbol, LocalDate from, LocalDate to) {
+        return signals.bySymbolInRange(symbol, from, to).stream()
+                .map(s -> new SignalMarker(s.id().toString(), s.tradeDate().toString(), s.action(), s.score()))
+                .toList();
     }
 }

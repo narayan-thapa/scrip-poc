@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import np.com.thapanarayan.backend.indicator.api.IndicatorDescriptor;
+import np.com.thapanarayan.backend.indicator.api.IndicatorEngine;
 import np.com.thapanarayan.backend.indicator.api.IndicatorResult;
 import np.com.thapanarayan.backend.indicator.api.IndicatorsComputedEvent;
 import np.com.thapanarayan.backend.indicator.api.ParamValues;
@@ -37,7 +38,7 @@ import org.ta4j.core.num.Num;
  * studies. Also computes the canonical per-(symbol, date) snapshot after market data is ready.
  */
 @Service
-public class IndicatorService {
+public class IndicatorService implements IndicatorEngine {
 
     private static final Logger log = LoggerFactory.getLogger(IndicatorService.class);
 

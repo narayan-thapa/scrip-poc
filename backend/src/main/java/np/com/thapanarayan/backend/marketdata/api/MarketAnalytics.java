@@ -8,5 +8,8 @@ public interface MarketAnalytics {
 
     Optional<VolumeProfileView> volumeProfile(String symbol, LocalDate date);
 
+    /** Stored profile for the window if present, else the daily profile for {@code to} (charting). */
+    Optional<VolumeProfileView> volumeProfile(String symbol, LocalDate from, LocalDate to);
+
     Optional<BrokerFlowView> brokerFlow(String symbol, LocalDate date);
 }

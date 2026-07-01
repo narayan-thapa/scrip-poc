@@ -2,7 +2,7 @@ import { httpResource } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { environment } from '../../../../environments/environment';
-import { BrokerFlowDto, SignalDetail, SignalSummary } from '../../../core/api/models';
+import { BrokerFlowDto, SignalDetail } from '../../../core/api/models';
 import { Spinner } from '../../../shared/ui/spinner/spinner';
 import { PriceChart } from '../price-chart/price-chart';
 import { AddIndicator, ActiveStudy } from '../../indicators/add-indicator/add-indicator';
@@ -36,8 +36,7 @@ import { ReasonsPanel } from '../../signals/reasons-panel/reasons-panel';
       <app-price-chart
         [symbol]="symbol()"
         [studies]="studies()"
-        [signalMarkers]="signals.value() ?? []"
-        (dateClicked)="selectSignalOn($event)"
+        (signalSelected)="selectedSignalId.set($event)"
       />
       <p class="muted">Markers show daily BUY/SELL/HOLD signals — click one to see why.</p>
     </section>
@@ -100,12 +99,7 @@ export class InstrumentMarket {
   protected readonly studies = signal<ActiveStudy[]>([]);
   protected readonly selectedSignalId = signal<string | null>(null);
 
-  /** The symbol's signals — drive chart markers. */
-  protected readonly signals = httpResource<SignalSummary[]>(
-    () => `${environment.apiBaseUrl}/api/v1/signals/symbol/${this.symbol()}?limit=120`,
-  );
-
-  /** The clicked signal's full detail (reasons), if any. */
+  /** The clicked signal's full detail (reasons); the chart emits the id from its markers. */
   protected readonly selectedSignal = httpResource<SignalDetail>(() => {
     const id = this.selectedSignalId();
     return id ? `${environment.apiBaseUrl}/api/v1/signals/${id}` : undefined;
@@ -117,11 +111,6 @@ export class InstrumentMarket {
 
   removeStudy(key: string): void {
     this.studies.update((list) => list.filter((s) => s.key !== key));
-  }
-
-  selectSignalOn(date: string): void {
-    const match = (this.signals.value() ?? []).find((s) => s.tradeDate === date);
-    this.selectedSignalId.set(match ? match.id : null);
   }
 
   protected readonly brokerFlow = httpResource<BrokerFlowDto>(
