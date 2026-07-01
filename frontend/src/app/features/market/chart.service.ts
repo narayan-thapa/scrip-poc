@@ -17,4 +17,10 @@ export class ChartApi {
     }
     return this.http.get<ChartPayload>(`${this.base}/${symbol}`, { params });
   }
+
+  /** Server-side PNG snapshot as a blob (fetched with the auth token, unlike a bare <img src>). */
+  snapshot(symbol: string, from: string, to: string): Observable<Blob> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.http.get(`${this.base}/${symbol}/snapshot.png`, { params, responseType: 'blob' });
+  }
 }

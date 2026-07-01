@@ -19,7 +19,7 @@ final class AlertMatcher {
     private AlertMatcher() {
     }
 
-    record Candidate(UUID userId, UUID signalId, String title, String body) {}
+    record Candidate(UUID userId, UUID signalId, String symbol, String title, String body) {}
 
     static List<Candidate> match(Map<String, SignalView> signals,
                                  Map<String, Set<UUID>> watchersBySymbol,
@@ -37,14 +37,14 @@ final class AlertMatcher {
 
             // (a) watchlist-driven: anyone watching this symbol.
             for (UUID userId : watchersBySymbol.getOrDefault(sv.symbol(), Set.of())) {
-                add(out, seen, userId, signalId, title, body);
+                add(out, seen, userId, signalId, sv.symbol(), title, body);
             }
             // (b) rule-driven: SIGNAL_ACTION rules matching this symbol+action.
             for (AlertRule rule : enabledRules) {
                 if ("SIGNAL_ACTION".equals(rule.getType())
                         && sv.symbol().equalsIgnoreCase(str(rule.getParams().get("symbol")))
                         && sv.action().name().equalsIgnoreCase(str(rule.getParams().get("action")))) {
-                    add(out, seen, rule.getUserId(), signalId, title, body);
+                    add(out, seen, rule.getUserId(), signalId, sv.symbol(), title, body);
                 }
             }
         }
@@ -52,9 +52,9 @@ final class AlertMatcher {
     }
 
     private static void add(List<Candidate> out, Set<String> seen, UUID userId, UUID signalId,
-                            String title, String body) {
+                            String symbol, String title, String body) {
         if (seen.add(userId + ":" + signalId)) {
-            out.add(new Candidate(userId, signalId, title, body));
+            out.add(new Candidate(userId, signalId, symbol, title, body));
         }
     }
 

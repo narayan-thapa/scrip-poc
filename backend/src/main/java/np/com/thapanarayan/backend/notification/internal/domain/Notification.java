@@ -21,6 +21,9 @@ public class Notification {
     @Column(name = "signal_id")
     private UUID signalId;
 
+    /** The scrip this notification is about (nullable) — drives the chart-snapshot thumbnail. */
+    private String symbol;
+
     @Column(nullable = false)
     private String title;
 
@@ -39,12 +42,17 @@ public class Notification {
     protected Notification() {
     }
 
-    public Notification(UUID userId, UUID signalId, String title, String body) {
+    public Notification(UUID userId, UUID signalId, String symbol, String title, String body) {
         this.id = UUID.randomUUID();
         this.userId = userId;
         this.signalId = signalId;
+        this.symbol = symbol;
         this.title = title;
         this.body = body;
+    }
+
+    public String getSymbol() {
+        return symbol;
     }
 
     public UUID getId() {

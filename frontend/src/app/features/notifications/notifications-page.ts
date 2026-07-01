@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NotificationCenter } from '../../core/notification/notification-center';
+import { ChartThumbnail } from '../market/chart-thumbnail/chart-thumbnail';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 
 /** Notification feed (read/unread) with mark-read + mark-all-read. Live updates arrive over SSE. */
 @Component({
   selector: 'app-notifications-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, EmptyState],
+  imports: [RouterLink, EmptyState, ChartThumbnail],
   template: `
     <header class="page-head">
       <h1>Notifications</h1>
@@ -25,6 +26,9 @@ import { EmptyState } from '../../shared/ui/empty-state/empty-state';
               <span class="muted">{{ n.createdAt }}</span>
             </div>
             <p class="body">{{ n.body }}</p>
+            @if (n.symbol; as sym) {
+              <app-chart-thumbnail [symbol]="sym" />
+            }
             <div class="actions">
               @if (n.signalId) { <a [routerLink]="['/signals', n.signalId]">View signal →</a> }
               @if (!n.read) { <button type="button" (click)="center.markRead(n.id)">Mark read</button> }

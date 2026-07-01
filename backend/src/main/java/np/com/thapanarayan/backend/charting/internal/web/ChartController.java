@@ -1,13 +1,13 @@
 package np.com.thapanarayan.backend.charting.internal.web;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import np.com.thapanarayan.backend.charting.internal.ChartPayload;
 import np.com.thapanarayan.backend.charting.internal.ChartPayload.MarkerPayload;
 import np.com.thapanarayan.backend.charting.internal.ChartService;
+import np.com.thapanarayan.backend.charting.internal.ChartSnapshotService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -30,9 +30,11 @@ import org.springframework.web.bind.annotation.RestController;
 class ChartController {
 
     private final ChartService service;
+    private final ChartSnapshotService snapshots;
 
-    ChartController(ChartService service) {
+    ChartController(ChartService service, ChartSnapshotService snapshots) {
         this.service = service;
+        this.snapshots = snapshots;
     }
 
     @GetMapping("/{symbol}")
@@ -57,5 +59,23 @@ class ChartController {
                                 @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                                 @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return service.markers(symbol, from, to);
+    }
+
+    /** Server-side PNG snapshot (candles + volume + signal markers) — e.g. embedded in notifications. */
+    @GetMapping(value = "/{symbol}/snapshot.png", produces = org.springframework.http.MediaType.IMAGE_PNG_VALUE)
+    ResponseEntity<byte[]> snapshot(@PathVariable String symbol,
+                                    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                                    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+                                    @RequestParam(defaultValue = "820") int width,
+                                    @RequestParam(defaultValue = "360") int height) {
+        byte[] png = snapshots.snapshotPng(symbol, from, to, bound(width, 320, 1600), bound(height, 160, 900));
+        return ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.IMAGE_PNG)
+                .cacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofHours(1)))
+                .body(png);
+    }
+
+    private static int bound(int v, int min, int max) {
+        return Math.max(min, Math.min(max, v));
     }
 }

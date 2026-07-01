@@ -45,7 +45,7 @@ public class NotificationService {
                 signals.byDate(date), watchlists.watchersBySymbol(), rules.findByEnabledTrue());
         for (AlertMatcher.Candidate c : candidates) {
             if (!notifications.existsByUserIdAndSignalId(c.userId(), c.signalId())) {
-                notifications.save(new Notification(c.userId(), c.signalId(), c.title(), c.body()));
+                notifications.save(new Notification(c.userId(), c.signalId(), c.symbol(), c.title(), c.body()));
             }
         }
     }

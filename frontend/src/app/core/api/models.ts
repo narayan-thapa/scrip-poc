@@ -396,6 +396,7 @@ export interface DashboardDto {
 export interface NotificationItem {
   id: string;
   signalId: string | null;
+  symbol: string | null;
   title: string;
   body: string;
   read: boolean;
